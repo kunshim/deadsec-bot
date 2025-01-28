@@ -16,4 +16,4 @@ jobs:
         username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          echo "hello"
+          cd Eruditus; docker compose down; docker compose up --build -d
