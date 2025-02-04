@@ -185,15 +185,13 @@ class CTF(app_commands.Group):
         async def predicate(interaction: discord.Interaction) -> bool:
             ROLES = [981520041663164486, 1305820255771430954, 1049604803564666950]
             member = interaction.user
-            user_role_ids = {role.id for role in member.roles}
-            
-            # ROLES 리스트의 권한 중 하나라도 있는지 확인
+            user_role_ids = {role.id for role in member.roles}                        
             if not any(role_id in user_role_ids for role_id in ROLES):
                 await interaction.response.send_message(
                     "Admin only 😒",
                     ephemeral=False
                 )
-                return True
+                return False
             return True
         return app_commands.check(predicate)
     
@@ -201,7 +199,7 @@ class CTF(app_commands.Group):
     @app_commands.checks.bot_has_permissions(manage_channels=True, manage_roles=True)
     @app_commands.checks.has_permissions(manage_channels=True, manage_roles=True)
     @app_commands.command()
-    #@has_required_roles()
+    @has_required_roles()
     async def createctf(self, interaction: discord.Interaction, name: str) -> None:
     # 응답을 지연시켜 긴 작업 수행 가능하게 함
         await interaction.response.defer()
@@ -816,8 +814,7 @@ class CTF(app_commands.Group):
         await interaction.user.remove_roles(role)
 
     @app_commands.checks.bot_has_permissions(manage_channels=True, send_messages=True)
-    @app_commands.command()
-    #@has_required_roles()
+    @app_commands.command()    
     @_in_ctf_channel()
     async def createchallenge(
         self,
@@ -1199,6 +1196,67 @@ class CTF(app_commands.Group):
         if text_channel.name.startswith("🎯"):
             await text_channel.edit(name=text_channel.name.replace("🎯", "🔄"))
 
+
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.command()
+    @_in_ctf_channel()  # Ensure that this command is run inside a CTF channel
+    async def workon_category(
+        self,
+        interaction: discord.Interaction,
+        category: str,  # The category name, e.g., 'web'
+    ) -> None:
+        """Join all challenges in the specified category.
+
+        Args:
+            interaction: The interaction that triggered this command.
+            category: The category name (e.g., 'web').
+        """
+        # Get CTF information from the current channel
+        ctf = get_ctf_info(guild_category=interaction.channel.category_id)
+
+        if ctf is None:
+            await interaction.response.send_message(
+                "No CTF found in this channel.", ephemeral=True
+            )
+            return
+
+        # Filter challenges by the given category
+        challenges = [
+            challenge
+            for challenge_id in ctf["challenges"]
+            if (challenge := get_challenge_info(_id=challenge_id))
+            and challenge["category"].lower() == category.lower()
+        ]
+
+        if not challenges:
+            await interaction.response.send_message(
+                f"No challenges found in the `{category}` category.", ephemeral=True
+            )
+            return
+
+        # Get the member who invoked the command
+        member = interaction.user
+
+        # Iterate over all the challenges and join the associated threads
+        for challenge in challenges:
+            challenge_thread = discord.utils.get(
+                interaction.guild.threads, id=challenge["thread"]
+            )
+
+            if challenge_thread:
+                # Add member to the thread
+                await add_challenge_worker(challenge_thread, challenge, member)
+
+                # Notify in the thread
+                await challenge_thread.send(
+                    f"{member.mention} joined the `{challenge['name']}` challenge in the `{category}` category."
+                )
+
+        await interaction.response.send_message(
+            f"✅ You have been added to all challenges in the `{category}` category.",
+            ephemeral=True,
+        )
+        
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command()
     @app_commands.autocomplete(name=_challenge_autocompletion_func)  # type: ignore
