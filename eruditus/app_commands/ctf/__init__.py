@@ -191,9 +191,9 @@ class CTF(app_commands.Group):
             if not any(role_id in user_role_ids for role_id in ROLES):
                 await interaction.response.send_message(
                     "Admin only 😒",
-                    ephemeral=True
+                    ephemeral=False
                 )
-                return False
+                return True
             return True
         return app_commands.check(predicate)
     
@@ -201,7 +201,7 @@ class CTF(app_commands.Group):
     @app_commands.checks.bot_has_permissions(manage_channels=True, manage_roles=True)
     @app_commands.checks.has_permissions(manage_channels=True, manage_roles=True)
     @app_commands.command()
-    @has_required_roles()
+    #@has_required_roles()
     async def createctf(self, interaction: discord.Interaction, name: str) -> None:
     # 응답을 지연시켜 긴 작업 수행 가능하게 함
         await interaction.response.defer()
@@ -817,7 +817,7 @@ class CTF(app_commands.Group):
 
     @app_commands.checks.bot_has_permissions(manage_channels=True, send_messages=True)
     @app_commands.command()
-    @has_required_roles()
+    #@has_required_roles()
     @_in_ctf_channel()
     async def createchallenge(
         self,
@@ -850,32 +850,12 @@ class CTF(app_commands.Group):
 
             thread_name = sanitize_channel_name(name)
             challenge_thread = await text_channel.create_thread(
-                name=f"❌-{thread_name}", invitable=False
+                name=f"❌-{thread_name}", invitable=False,
+                type=discord.ChannelType.public_thread  
             )
-            
-            # remote connection을 async with context manager로 변경
-            try:
-                r = await remote('10.0.0.54', 58655)
-                async with r:
-                    await r.sendline('new')
-                    await r.sendline(name)
-                    await r.sendline(category_channel.name[2:])                    
-                    url = (await r.recvline())[:-1].decode()
-            except Exception as e:
-                print(f"Error in remote connection: {e}")
-                await interaction.followup.send("Failed to create HackMD note.", ephemeral=True)
-                return
+                        
                 
             print(f"Thread created: {challenge_thread.id}")
-            embed = discord.Embed(
-                title="📝 CTF Notes",
-                description=url,
-                colour=discord.Colour.blue(),
-                timestamp=datetime.now()
-            )
-            await challenge_thread.send(embed=embed)
-            print('Done')
-
             challenge_oid = ObjectId()
 
             announcements_channel = discord.utils.get(

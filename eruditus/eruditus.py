@@ -755,19 +755,7 @@ class Eruditus(discord.Client):
                     # Otherwise, if it's external, we don't need to fetch it ourselves,
                     # we can just send the URL as is.
                     else:
-                        img_urls.append(image.url)
-                try:
-                    r = await remote('10.0.0.54', 58655)
-                    async with r:
-                        await r.sendline('new')
-                        await r.sendline(name)
-                        await r.sendline(category_channel.name[2:])                    
-                        note_url = (await r.recvline())[:-1].decode()
-                except Exception as e:
-                    print(f"Error in remote connection: {e}")
-                    note_url = None   
-                if note_url == None:
-                    note_url = ":("                    
+                        img_urls.append(image.url)                
                 embed = discord.Embed(
                     title=f"{challenge.name} - {challenge.value} points",
                     description=truncate(
@@ -775,7 +763,6 @@ class Eruditus(discord.Client):
                         f"**Description:** {description}\n"
                         f"**Files:** {files_str}\n"
                         f"**Tags:** {tags}",
-                        f"**CTFNotes:** {note_url}",
                         max_len=4096,
                     ),
                     colour=discord.Colour.blue(),
