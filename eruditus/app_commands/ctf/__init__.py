@@ -952,7 +952,6 @@ class CTF(app_commands.Group):
         new_name: str,
     ) -> None:
         """Rename a challenge.
-
         Args:
             interaction: The interaction that triggered this command.
             new_name: New challenge name.

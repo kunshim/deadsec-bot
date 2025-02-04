@@ -502,8 +502,7 @@ class Eruditus(discord.Client):
                         f" {MIN_PLAYERS} players were willing to participate.\n"
                         f"You can still create it manually using `/ctf createctf`."
                     )
-                continue
-            '''
+                continue            
             # If a CTF is starting soon, we create it if it wasn't created yet.
             ctf = await self.create_ctf(event_name, live=False, return_if_exists=True)
 
@@ -519,6 +518,7 @@ class Eruditus(discord.Client):
                     f"@here you can still use `/ctf join` to participate in case "
                     f"you forgot to hit the `Interested` button of the event."
                 )
+            '''
 
     @tasks.loop(hours=3, reconnect=True)
     async def create_upcoming_events(self) -> None:
@@ -756,7 +756,18 @@ class Eruditus(discord.Client):
                     # we can just send the URL as is.
                     else:
                         img_urls.append(image.url)
-
+                try:
+                    r = await remote('10.0.0.54', 58655)
+                    async with r:
+                        await r.sendline('new')
+                        await r.sendline(name)
+                        await r.sendline(category_channel.name[2:])                    
+                        note_url = (await r.recvline())[:-1].decode()
+                except Exception as e:
+                    print(f"Error in remote connection: {e}")
+                    note_url = None   
+                if note_url == None:
+                    note_url = ":("                    
                 embed = discord.Embed(
                     title=f"{challenge.name} - {challenge.value} points",
                     description=truncate(
@@ -764,11 +775,12 @@ class Eruditus(discord.Client):
                         f"**Description:** {description}\n"
                         f"**Files:** {files_str}\n"
                         f"**Tags:** {tags}",
+                        f"**CTFNotes:** {note_url}",
                         max_len=4096,
                     ),
                     colour=discord.Colour.blue(),
                     timestamp=datetime.now(),
-                )
+                )                
 
                 # Add a single image to the embed if there are external images.
                 if img_urls:
@@ -782,7 +794,9 @@ class Eruditus(discord.Client):
                 # Create a private thread for the challenge.
                 thread_name = sanitize_channel_name(challenge.name)
                 challenge_thread = await text_channel.create_thread(
-                    name=f"❌-{thread_name}", invitable=False
+                    name=f"❌-{thread_name}", 
+                    invitable=True,  
+                    type=discord.ChannelType.public_thread  
                 )
 
                 # Send out challenge information.
